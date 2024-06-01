@@ -58,14 +58,14 @@ osThreadId_t rewriteDisplayHandle;
 const osThreadAttr_t rewriteDisplay_attributes = {
   .name = "rewriteDisplay",
   .stack_size = 2048 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityRealtime7,
 };
 /* Definitions for buttonListen */
 osThreadId_t buttonListenHandle;
 const osThreadAttr_t buttonListen_attributes = {
   .name = "buttonListen",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityBelowNormal,
 };
 /* USER CODE BEGIN PV */
 // INPUT CAPTURE VARIABLES
@@ -321,9 +321,9 @@ static void DrawGraphChangingLength(void) {
 
 //MENU ITEMS INITIALIZATION
 //MENU_ITEM(Name, Next, Previous, Parent,    Child,     SelectFunc,           EnterFunc,         xPos,yPos, cursorWidth, cursorHeight, hasachild, Text)
-MENU_ITEM(Menu_1, Menu_2, Menu_3, NULL_MENU, Menu_1_1,  Item_Select_Callback, Level1Item2_Enter,       0, 20,  240, 40, 1, "С неизменяющимся измеряемым -размером");
-MENU_ITEM(Menu_2, Menu_3, Menu_1, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 60,  240, 40, 0, "С изменяющимся измеряемым -размером"); // DrawGraphChangingLength
-MENU_ITEM(Menu_3, Menu_1, Menu_2, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 100, 240, 40, 0, "График измерений");
+MENU_ITEM(Menu_1, Menu_2, Menu_2, NULL_MENU, Menu_1_1,  Item_Select_Callback, Level1Item2_Enter,       0, 20,  240, 40, 1, "С неизменяющимся измеряемым -размером");
+MENU_ITEM(Menu_2, Menu_1, Menu_1, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 60,  240, 40, 0, "С изменяющимся измеряемым -размером"); // DrawGraphChangingLength
+//MENU_ITEM(Menu_3, Menu_1, Menu_2, NULL_MENU, NULL_MENU, Item_Select_Callback, NULL, 0, 100, 240, 40, 0, "График измерений");
 
 MENU_ITEM(Menu_1_1, Menu_1_2, Menu_1_8, Menu_1, NULL_MENU, Item_Select_Callback, NULL, 5, 20, 110, 25, 0, current_messages[0]);
 MENU_ITEM(Menu_1_2, Menu_1_3, Menu_1_1, Menu_1, NULL_MENU, Item_Select_Callback, NULL, 5, 45, 110, 25, 0, current_messages[1]);
@@ -457,7 +457,7 @@ static void displayGraphPoints() {
 	u8g2_SetFont(&u8g2, u8g2_font_chikita_tf);
 	u8g2_DrawStr(&u8g2, 10, 108, bias_names[current_bias_index]);
 	u8g2_DrawStr(&u8g2, 100, 108, multiplier_names[current_multiplier_index]);
-	u8g2_DrawStr(&u8g2, 175, 108,"OX: 500 ms");
+//	u8g2_DrawStr(&u8g2, 175, 108,"OX: 500 м�?");
 	char mes1[6];
 	char mes2[6];
 	char mes3[6];
@@ -465,11 +465,11 @@ static void displayGraphPoints() {
 	char current_message[25];
 	char pointer_message[25];
 	itoa(line_points_y[line_points_max_index-1], mes1, 10);
-	sprintf(previous_message, "Previous: %s\n", mes1);
+	sprintf(previous_message, "Пред.: %s\n", mes1);
 	itoa(line_points_y[line_points_max_index], mes2, 10);
-	sprintf(current_message, "Current: %s\n", mes2);
+	sprintf(current_message, "Тек.: %s\n", mes2);
 	itoa(cursor_coordinate, mes3, 10);
-	sprintf(pointer_message, "Pointer: %s\n", mes3);
+	sprintf(pointer_message, "Указ.: %s\n", mes3);
 	u8g2_DrawStr(&u8g2, 10, 118, previous_message);
 	u8g2_DrawStr(&u8g2, 100, 118, current_message);
 	u8g2_DrawStr(&u8g2, 175, 118, pointer_message);
@@ -1189,13 +1189,14 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// MOVE IN CHILD ELEMENT, PROGRESS (FOR GRAPHS AND 2 MENU DETERMINATION BREAK U8G2 RULES)
 		case 3:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				u8g2_FirstPage(&u8g2);
-				do {
-					displayGraphPoints();
-				} while (u8g2_NextPage(&u8g2));
-				break;
-			} else if (Menu_GetCurrentMenu() == &Menu_2) {
+//			if (Menu_GetCurrentMenu() == &Menu_3) {
+//				u8g2_FirstPage(&u8g2);
+//				do {
+//					displayGraphPoints();
+//				} while (u8g2_NextPage(&u8g2));
+//				break;
+//			} else
+			if (Menu_GetCurrentMenu() == &Menu_2) {
 				u8g2_FirstPage(&u8g2);
 				do {
 					DrawGraphChangingLength();
@@ -1219,14 +1220,15 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MAKE SHARPER, ELSE IF FIRST MENU - MOVE CHANGEBLE POSITION TO LOWER
 		case 5:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if(current_multiplier_index < max_multiplier_index) {
-					current_multiplier_index++;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+//			if (Menu_GetCurrentMenu() == &Menu_3) {
+//				if(current_multiplier_index < max_multiplier_index) {
+//					current_multiplier_index++;
+//					u8g2_ClearBuffer(&u8g2);
+//					u8g2_SendBuffer(&u8g2);
+//				}
+//				ButtonState = 3;
+//			} else
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				if (menu1position < max_menu_position) {
 					menu1position += 1;
 				}
@@ -1235,14 +1237,15 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MAKE SMOOTHER, IF FIRST MENU - MOVE TO HIGHER POSITION
 		case 6:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if (current_multiplier_index > 0) { // check if this is not equal to zero
-					current_multiplier_index--;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+//			if (Menu_GetCurrentMenu() == &Menu_3) {
+//				if (current_multiplier_index > 0) { // check if this is not equal to zero
+//					current_multiplier_index--;
+//					u8g2_ClearBuffer(&u8g2);
+//					u8g2_SendBuffer(&u8g2);
+//				}
+//				ButtonState = 3;
+//			} else
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				if (menu1position > 0) {
 					menu1position -= 1;
 				}
@@ -1251,14 +1254,15 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MOVE UP, THEN REDRAW
 		case 7:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if (current_bias_index < max_bias_index) {
-					current_bias_index++;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+//			if (Menu_GetCurrentMenu() == &Menu_3) {
+//				if (current_bias_index < max_bias_index) {
+//					current_bias_index++;
+//					u8g2_ClearBuffer(&u8g2);
+//					u8g2_SendBuffer(&u8g2);
+//				}
+//				ButtonState = 3;
+//			} else
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				int index_ = 9;
 				if (Menu_GetCurrentMenu() == &Menu_1_1) {
 					index_ = 0;
@@ -1290,14 +1294,15 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MOVE DOWN, THEN REDRAW
 		case 8:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if (current_bias_index > 0) { // check if this is not equal to zero
-					current_bias_index--;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+//			if (Menu_GetCurrentMenu() == &Menu_3) {
+//				if (current_bias_index > 0) { // check if this is not equal to zero
+//					current_bias_index--;
+//					u8g2_ClearBuffer(&u8g2);
+//					u8g2_SendBuffer(&u8g2);
+//				}
+//				ButtonState = 3;
+//			} else
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				int index_ = 9;
 				if (Menu_GetCurrentMenu() == &Menu_1_1) {
 					index_ = 0;

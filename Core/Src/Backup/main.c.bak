@@ -58,7 +58,7 @@ osThreadId_t rewriteDisplayHandle;
 const osThreadAttr_t rewriteDisplay_attributes = {
   .name = "rewriteDisplay",
   .stack_size = 2048 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityRealtime7,
 };
 /* Definitions for buttonListen */
 osThreadId_t buttonListenHandle;
@@ -80,10 +80,17 @@ const uint64_t translateus2Y = 1562;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // METAL INDICATOR PARAMETERS
-const double min_gs_speed = 0.003; // obvious, no exact
-const double max_hss_speed = 0.009; // obvious, no exact
-const double max_gs_speed = 0.0049; // mm/ns
-const double min_hss_speed = 0.0055; // mm/ns
+//const double min_gs_speed = 0.003; // obvious, no exact
+//const double max_hss_speed = 0.009; // obvious, no exact
+//const double max_gs_speed = 0.0049; // mm/ns
+//const double min_hss_speed = 0.0055; // mm/ns
+
+const double min_gs_speed = 0.0015; // obvious, no exact
+const double max_hss_speed = 0.0045; // obvious, no exact
+const double max_gs_speed = 0.00245; // mm/ns
+const double min_hss_speed = 0.00275; // mm/ns
+
+const uint32_t TEST_DELAY = 620;  // ns
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -169,62 +176,10 @@ char bias_names[][25] = {
 
 };
 
-int line_points_max_index = 240;
-int line_points_x[] = {  0,   1,   2,   3,   4,   5,   6,   7,   8,   9,  10,  11,  12,
-        				13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,  25,
-						26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,  37,  38,
-						39,  40,  41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,
-						52,  53,  54,  55,  56,  57,  58,  59,  60,  61,  62,  63,  64,
-						65,  66,  67,  68,  69,  70,  71,  72,  73,  74,  75,  76,  77,
-						78,  79,  80,  81,  82,  83,  84,  85,  86,  87,  88,  89,  90,
-						91,  92,  93,  94,  95,  96,  97,  98,  99, 100, 101, 102, 103,
-						104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116,
-						117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129,
-						130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142,
-						143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155,
-						156, 157, 158, 159, 160, 161, 162, 163, 164, 165, 166, 167, 168,
-						169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179, 180, 181,
-						182, 183, 184, 185, 186, 187, 188, 189, 190, 191, 192, 193, 194,
-						195, 196, 197, 198, 199, 200, 201, 202, 203, 204, 205, 206, 207,
-						208, 209, 210, 211, 212, 213, 214, 215, 216, 217, 218, 219, 220,
-						221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233,
-						234, 235, 236, 237, 238, 239, 240
-};
+const int line_points_max_index = 1024;
+int line_points_x[1025] = {0};  // initialized in main
 // readed values
-int line_points_y[] = { 0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,
-						0,  0,  0,  0,  0,  0,  0
-};
-// sine points
-int line_points_sin_y[] = {
-		128, 131, 134, 138, 141, 144, 148, 151, 154, 157, 161, 164, 167, 170, 173, 176, 180, 183, 186, 189,
-		192, 194, 197, 200, 203, 205, 208, 211, 213, 216, 218, 220, 223, 225, 227, 229, 231, 233, 235, 237,
-		238, 240, 242, 243, 244, 246, 247, 248, 249, 250, 251, 252, 253, 253, 254, 254, 255, 255, 255, 255,
-		256, 255, 255, 255, 255, 254, 254, 253, 253, 252, 251, 250, 249, 248, 247, 246, 244, 243, 242, 240,
-		238, 237, 235, 233, 231, 229, 227, 225, 223, 220, 218, 216, 213, 211, 208, 205, 203, 200, 197, 194,
-		192, 189, 186, 183, 180, 176, 173, 170, 167, 164, 161, 157, 154, 151, 148, 144, 141, 138, 134, 131,
-		128, 124, 121, 117, 114, 111, 107, 104, 101, 98, 94, 91, 88, 85, 82, 79, 75, 72, 69, 66, 64, 61, 58,
-		55, 52, 50, 47, 44, 42, 39, 37, 35, 32, 30, 28, 26, 24, 22, 20, 18, 17, 15, 13, 12, 11, 9, 8, 7, 6,
-		5, 4, 3, 2, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 17,
-		18, 20, 22, 24, 26, 28, 30, 32, 35, 37, 39, 42, 44, 47, 50, 52, 55, 58, 61, 64, 66, 69, 72, 75, 79,
-		82, 85, 88, 91, 94, 98, 101, 104, 107, 111, 114, 117, 121, 124, 127
-};
+int line_points_y[1025] = {0};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -321,7 +276,6 @@ uint64_t used_difference_ = 0;
 uint8_t already_used_ = 0;
 static void DrawGraphChangingLength(void) {
 	u8g2_SetDrawColor(&u8g2, 1);
-	//u8g2_SetBitmapMode(&u8g2, 1);
 	u8g2_FirstPage(&u8g2);
 	do {
 		u8g2_DrawFrame(&u8g2, 10, 4, 220, 120); // x, y, w, h
@@ -336,10 +290,10 @@ static void DrawGraphChangingLength(void) {
 		u8g2_DrawDLine(&u8g2, 162, 4, 162, 40, 1); // x1, y1, x2, y2
 		if (!already_used_) {
 			used_difference_ = 0;
-			for (int i = 230; i <= 240; ++i) {
+			for (int i = 0; i <= line_points_max_index; ++i) {
 				used_difference_ += line_points_y[i];
 			}
-			used_difference_ /= 11;
+			used_difference_ /= line_points_max_index+1;
 			already_used_ = 1;
 		}
 		if (already_used_ && used_difference_) {
@@ -367,8 +321,8 @@ static void DrawGraphChangingLength(void) {
 
 //MENU ITEMS INITIALIZATION
 //MENU_ITEM(Name, Next, Previous, Parent,    Child,     SelectFunc,           EnterFunc,         xPos,yPos, cursorWidth, cursorHeight, hasachild, Text)
-MENU_ITEM(Menu_1, Menu_2, Menu_3, NULL_MENU, Menu_1_1,  Item_Select_Callback, Level1Item2_Enter,       0, 20,  240, 40, 1, "С неизмен�?ющим�?�? измер�?емым -размером");
-MENU_ITEM(Menu_2, Menu_3, Menu_1, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 60,  240, 40, 0, "С измен�?ющим�?�? измер�?емым -размером"); // DrawGraphChangingLength
+MENU_ITEM(Menu_1, Menu_2, Menu_3, NULL_MENU, Menu_1_1,  Item_Select_Callback, Level1Item2_Enter,       0, 20,  240, 40, 1, "С неизменяющимся измеряемым -размером");
+MENU_ITEM(Menu_2, Menu_3, Menu_1, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 60,  240, 40, 0, "С изменяющимся измеряемым -размером"); // DrawGraphChangingLength
 MENU_ITEM(Menu_3, Menu_1, Menu_2, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 100, 240, 40, 0, "График измерений");
 
 MENU_ITEM(Menu_1_1, Menu_1_2, Menu_1_8, Menu_1, NULL_MENU, Item_Select_Callback, NULL, 5, 20, 110, 25, 0, current_messages[0]);
@@ -503,7 +457,7 @@ static void displayGraphPoints() {
 	u8g2_SetFont(&u8g2, u8g2_font_chikita_tf);
 	u8g2_DrawStr(&u8g2, 10, 108, bias_names[current_bias_index]);
 	u8g2_DrawStr(&u8g2, 100, 108, multiplier_names[current_multiplier_index]);
-	u8g2_DrawStr(&u8g2, 175, 108,"OX: 500 ms");
+//	u8g2_DrawStr(&u8g2, 175, 108,"OX: 500 мс");
 	char mes1[6];
 	char mes2[6];
 	char mes3[6];
@@ -511,11 +465,11 @@ static void displayGraphPoints() {
 	char current_message[25];
 	char pointer_message[25];
 	itoa(line_points_y[line_points_max_index-1], mes1, 10);
-	sprintf(previous_message, "Previous: %s\n", mes1);
+	sprintf(previous_message, "Пред.: %s\n", mes1);
 	itoa(line_points_y[line_points_max_index], mes2, 10);
-	sprintf(current_message, "Current: %s\n", mes2);
+	sprintf(current_message, "Тек.: %s\n", mes2);
 	itoa(cursor_coordinate, mes3, 10);
-	sprintf(pointer_message, "Pointer: %s\n", mes3);
+	sprintf(pointer_message, "Указ.: %s\n", mes3);
 	u8g2_DrawStr(&u8g2, 10, 118, previous_message);
 	u8g2_DrawStr(&u8g2, 100, 118, current_message);
 	u8g2_DrawStr(&u8g2, 175, 118, pointer_message);
@@ -593,10 +547,10 @@ static void DrawStateConstatntLength() {
 		}
 		if (!already_used) {
 			used_difference = 0;
-			for (int i = 230; i <= 240; ++i) {
+			for (int i = 0; i <= 240; ++i) {
 				used_difference += line_points_y[i];
 			}
-			used_difference /= 11;
+			used_difference /= 241;
 			already_used = 1;
 		}
 		// draw frame
@@ -699,19 +653,13 @@ uint8_t u8g2_gpio_and_delay_stm32(U8X8_UNUSED u8x8_t *u8x8, U8X8_UNUSED uint8_t 
 /* USER CODE BEGIN 0 */
 
 // CAPTURE TIME BETWEEN TWO PULSES
+uint32_t number_of_overflowing = 0;  // TO DO
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-//	HAL_GPIO_TogglePin(LED1_GPIO_Port, LED1_Pin);
-//	HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 	if ((htim->Instance == TIM10) && (valid_for_capturing == 1)) {
-//		HAL_GPIO_TogglePin(LED2_GPIO_Port,LED2_Pin);
-//		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, GPIO_PIN_SET);
 		Difference = htim->Instance->CCR1;
-		if (Difference) {
-			HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-			add_element(round(COEFFICIENT*(double)(Difference)/TIMCLOCK));
-			valid_for_capturing = 0;
-		}
+		add_element(round(COEFFICIENT*(double)(Difference)/TIMCLOCK) - TEST_DELAY);
+		valid_for_capturing = 0;
 	}
 }
 
@@ -719,20 +667,10 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 //uint8_t is_period_started = 0;
 void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 {
-//	HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
-//	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
 	if (htim->Instance == TIM14) {
-//		HAL_GPIO_TogglePin(LED4_GPIO_Port,LED4_Pin);
-		HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
 		__HAL_TIM_SET_COUNTER(&htim10, 0x0000);
 		valid_for_capturing = 1;
-//		is_period_started = 0;
-		//HAL_GPIO_WritePin(Biased_A_PWM_GPIO_Port, Biased_A_PWM_Pin, GPIO_PIN_RESET);
 	}
-
-//	if (htim->Instance == TIM13 && is_period_started) {
-//		HAL_TIM_PWM_Start(&htim14, TIM_CHANNEL_1);
-//	}
 }
 
 // reset timer for input capture, to get only ticks of tim2 after
@@ -794,6 +732,11 @@ int main(void)
   Menu_SetGenericWriteCallback(Generic_Write, &Menu_1);
   Menu_SetCurrentLayerTopMenu(&Menu_1);
   Menu_Navigate(&Menu_1, Menu_GetCurrentLayerTopMenu());
+
+
+  for (uint32_t i = 0; i <= line_points_max_index; ++i) {
+	  line_points_x[i] = i;
+  }
 
   /* USER CODE END 2 */
 
@@ -1102,9 +1045,6 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOE, LED3_Pin|LED1_Pin|LED2_Pin|LED4_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOG, WR0_Pin|DB7_Pin|DB6_Pin|DB5_Pin
                           |DB4_Pin|DB3_Pin|DB2_Pin|DB1_Pin
                           |DB0_Pin|WR1_Pin|CD_Pin, GPIO_PIN_RESET);
@@ -1112,21 +1052,16 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOD, COL1_Pin|COL4_Pin|COL3_Pin|COL2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PE2 PE3 PE6 PE7
-                           PE8 PE10 PE11 PE12
-                           PE14 PE15 PE1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12
-                          |GPIO_PIN_14|GPIO_PIN_15|GPIO_PIN_1;
+  /*Configure GPIO pins : PE2 PE3 PE4 PE6
+                           PE7 PE8 PE9 PE10
+                           PE11 PE12 PE13 PE14
+                           PE15 PE0 PE1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_6
+                          |GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_0|GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : LED3_Pin LED1_Pin LED2_Pin LED4_Pin */
-  GPIO_InitStruct.Pin = LED3_Pin|LED1_Pin|LED2_Pin|LED4_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PC13 PC0 PC1 PC2

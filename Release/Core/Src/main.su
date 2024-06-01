@@ -1,11 +1,11 @@
 ../Core/Src/main.c:203:13:Level1Item2_Enter	16	static
 ../Core/Src/main.c:212:13:Item_Select_Callback	24	static
 ../Core/Src/main.c:340:13:Generic_Write	160	static
-../Core/Src/main.c:1349:6:buttonListenFunction	104	static
+../Core/Src/main.c:1354:6:buttonListenFunction	104	static
 ../Core/Src/main.c:221:6:u8g2_DrawDLine	56	static
 ../Core/Src/main.c:277:13:DrawGraphChangingLength	104	static
 ../Core/Src/main.c:425:8:double_string	56	static
-../Core/Src/main.c:1172:6:rewriteDisplayFunction	200	static
+../Core/Src/main.c:1172:6:rewriteDisplayFunction	136	static
 ../Core/Src/main.c:438:6:add_element	16	static
 ../Core/Src/main.c:587:6:delay_us	0	static
 ../Core/Src/main.c:594:9:u8g2_gpio_and_delay_stm32	8	static
@@ -13,5 +13,5 @@
 ../Core/Src/main.c:668:6:HAL_TIM_PWM_PulseFinishedCallback	0	static
 ../Core/Src/main.c:796:6:SystemClock_Config	88	static,ignoring_inline_asm
 ../Core/Src/main.c:686:5:main	112	static,ignoring_inline_asm
-../Core/Src/main.c:1390:6:HAL_TIM_PeriodElapsedCallback	0	static
-../Core/Src/main.c:1413:6:Error_Handler	0	static,ignoring_inline_asm
+../Core/Src/main.c:1395:6:HAL_TIM_PeriodElapsedCallback	0	static
+../Core/Src/main.c:1418:6:Error_Handler	0	static,ignoring_inline_asm
