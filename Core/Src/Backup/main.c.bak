@@ -48,6 +48,8 @@ uint8_t ButtonState = 0;
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+RTC_HandleTypeDef hrtc;
+
 TIM_HandleTypeDef htim9;
 TIM_HandleTypeDef htim10;
 TIM_HandleTypeDef htim13;
@@ -65,7 +67,7 @@ osThreadId_t buttonListenHandle;
 const osThreadAttr_t buttonListen_attributes = {
   .name = "buttonListen",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .priority = (osPriority_t) osPriorityBelowNormal,
 };
 /* USER CODE BEGIN PV */
 // INPUT CAPTURE VARIABLES
@@ -76,7 +78,7 @@ uint8_t valid_for_capturing = 2;
 //uint8_t Is_First_Captured = 0;
 const uint64_t TIMCLOCK = 84000000; //168000000
 const uint64_t COEFFICIENT = 1000000000;
-const uint64_t translateus2Y = 1562;
+//const uint64_t translateus2Y = 1562;
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // METAL INDICATOR PARAMETERS
@@ -86,16 +88,17 @@ const uint64_t translateus2Y = 1562;
 //const double min_hss_speed = 0.0055; // mm/ns
 
 const double min_gs_speed = 0.0015; // obvious, no exact
-const double max_hss_speed = 0.0045; // obvious, no exact
 const double max_gs_speed = 0.00245; // mm/ns
 const double min_hss_speed = 0.00275; // mm/ns
+const double max_hss_speed = 0.0045; // obvious, no exact
 
-const uint32_t TEST_DELAY = 620;  // ns
+const uint32_t TEST_DELAY = 400;  // ns
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
 // ARRAY VARIABLES FOR CONST MEASURING LENGTH
 const uint8_t array_size = 8;
+const uint8_t array_len = 6;
 int data_array[][6] = {
 		{4, 8, 0, 0, 0, 0},
 		{5, 6, 0, 0, 0, 0},
@@ -124,56 +127,14 @@ char messages[][25] = {
 		{"L8="},
 };
 char current_messages[][25] = {
-		{"L1=480,000"},
-		{"L2=560,000"},
-		{"L3=000,000"},
-		{"L4=000,000"},
-		{"L5=000,000"},
-		{"L6=000,000"},
-		{"L7=000,000"},
-		{"L8=000,000"},
-};
-
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// GRAPH STATE VARIABLES
-int current_multiplier_index = 4;
-const int max_multiplier_index = 8;
-double multiplier[] = {0.1, 0.25, 0.5, 0.75, 1.0, 1.5, 2.0, 4.0, 10};
-char multiplier_names[][25] = {
-		{"OX: 100mV"},
-		{"OX: 250mV"},
-		{"OX: 500mV"},
-		{"OX: 750mV"},
-		{"OX: 1V"},
-		{"OX: 1,5V"},
-		{"OX: 2V"},
-		{"OX: 4V"},
-		{"OX: 10V"},
-};
-
-int current_bias_index = 8;
-int max_bias_index = 16;
-int bias[] = {-64, -56, -48, -40, -32, -24, -16, -8, 0, 8, 16, 24, 32, 40, 48, 56, 64};
-char bias_names[][25] = {
-		{"Bias: 100%"},
-		{"Bias: 87.5%"},
-		{"Bias: 75%"},
-		{"Bias: 62.5%"},
-		{"Bias: 50%"},
-		{"Bias: 37.5%"},
-		{"Bias: 25%"},
-		{"Bias: 12.5%"},
-		{"Bias: 0%"},
-		{"Bias: -12.5%"},
-		{"Bias: -25%"},
-		{"Bias: -37.5%"},
-		{"Bias: -50%"},
-		{"Bias: -62.5%"},
-		{"Bias: -75%"},
-		{"Bias: -87.5%"},
-		{"Bias: -100%"},
-
+		{" L1=480,000мм"},
+		{" L2=560,000мм"},
+		{" L3=000,000мм"},
+		{" L4=000,000мм"},
+		{" L5=000,000мм"},
+		{" L6=000,000мм"},
+		{" L7=000,000мм"},
+		{" L8=000,000мм"},
 };
 
 const int line_points_max_index = 1024;
@@ -194,6 +155,7 @@ static void MX_TIM10_Init(void);
 static void MX_TIM9_Init(void);
 static void MX_TIM13_Init(void);
 static void MX_TIM14_Init(void);
+static void MX_RTC_Init(void);
 void rewriteDisplayFunction(void *argument);
 void buttonListenFunction(void *argument);
 
@@ -304,8 +266,8 @@ static void DrawGraphChangingLength(void) {
 			u8g2_DrawUTF8(&u8g2, 185, 95, "мм");
 			char mes1[25];
 			char mes2[25];
-			double ans1 = used_difference_*max_gs_speed;
-			double ans2 = used_difference_*min_hss_speed;
+			double ans1 = used_difference_*max_hss_speed;
+			double ans2 = used_difference_*min_gs_speed;
 			if (ans1 && ans2) {
 				sprintf(mes1, "%.2lf\n", ans1);
 				u8g2_DrawUTF8(&u8g2, 20, 80, mes1);
@@ -321,9 +283,9 @@ static void DrawGraphChangingLength(void) {
 
 //MENU ITEMS INITIALIZATION
 //MENU_ITEM(Name, Next, Previous, Parent,    Child,     SelectFunc,           EnterFunc,         xPos,yPos, cursorWidth, cursorHeight, hasachild, Text)
-MENU_ITEM(Menu_1, Menu_2, Menu_3, NULL_MENU, Menu_1_1,  Item_Select_Callback, Level1Item2_Enter,       0, 20,  240, 40, 1, "С неизменяющимся измеряемым -размером");
-MENU_ITEM(Menu_2, Menu_3, Menu_1, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 60,  240, 40, 0, "С изменяющимся измеряемым -размером"); // DrawGraphChangingLength
-MENU_ITEM(Menu_3, Menu_1, Menu_2, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 100, 240, 40, 0, "График измерений");
+MENU_ITEM(Menu_1, Menu_2, Menu_2, NULL_MENU, Menu_1_1,  Item_Select_Callback, Level1Item2_Enter,       0, 20,  240, 40, 1, "С неизмен�?ющим�?�? измер�?емым -размером");
+MENU_ITEM(Menu_2, Menu_1, Menu_1, NULL_MENU, NULL_MENU, Item_Select_Callback, DrawGraphChangingLength, 0, 60,  240, 40, 0, "С измен�?ющим�?�? измер�?емым -размером"); // DrawGraphChangingLength
+//MENU_ITEM(Menu_3, Menu_1, Menu_2, NULL_MENU, NULL_MENU, Item_Select_Callback, NULL, 0, 100, 240, 40, 0, "График измерений");
 
 MENU_ITEM(Menu_1_1, Menu_1_2, Menu_1_8, Menu_1, NULL_MENU, Item_Select_Callback, NULL, 5, 20, 110, 25, 0, current_messages[0]);
 MENU_ITEM(Menu_1_2, Menu_1_3, Menu_1_1, Menu_1, NULL_MENU, Item_Select_Callback, NULL, 5, 45, 110, 25, 0, current_messages[1]);
@@ -442,71 +404,6 @@ void add_element(int a) {
 	line_points_y[line_points_max_index] = a;
 }
 
-///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// DISPLAY GRAPH WITH ADD POINT TO IT (3 POINT IN MAIN MENU)
-static void displayGraphPoints() {
-	// static counter for new drawing
-	u8g2_SetDrawColor(&u8g2, 1);
-	const int max_x_point = 220;
-	const int max_y_point = 100;
-	//write cursor
-	int cursor_coordinate = 50-pointer_y_coordinate;
-	u8g2_DrawHLine(&u8g2, 10, cursor_coordinate, max_x_point);
-	// axis name and value
-	u8g2_SetFont(&u8g2, u8g2_font_chikita_tf);
-	u8g2_DrawStr(&u8g2, 10, 108, bias_names[current_bias_index]);
-	u8g2_DrawStr(&u8g2, 100, 108, multiplier_names[current_multiplier_index]);
-//	u8g2_DrawStr(&u8g2, 175, 108,"OX: 500 мс");
-	char mes1[6];
-	char mes2[6];
-	char mes3[6];
-	char previous_message[25];
-	char current_message[25];
-	char pointer_message[25];
-	itoa(line_points_y[line_points_max_index-1], mes1, 10);
-	sprintf(previous_message, "Пред.: %s\n", mes1);
-	itoa(line_points_y[line_points_max_index], mes2, 10);
-	sprintf(current_message, "Тек.: %s\n", mes2);
-	itoa(cursor_coordinate, mes3, 10);
-	sprintf(pointer_message, "Указ.: %s\n", mes3);
-	u8g2_DrawStr(&u8g2, 10, 118, previous_message);
-	u8g2_DrawStr(&u8g2, 100, 118, current_message);
-	u8g2_DrawStr(&u8g2, 175, 118, pointer_message);
-	// draw frame
-	u8g2_DrawFrame(&u8g2, 10, 0, max_x_point, max_y_point+1);
-	// vertical lines for grid
-	int x_steps = 14;
-	for (int i = 1; i < x_steps; ++i) {
-		u8g2_DrawDLine(&u8g2, i*15 + 15, 0, i*15 + 15, max_y_point, 1);
-	}
-	// horizontal lines for grid
-	int y_steps = 6;
-	for (int i = 1; i < y_steps; ++i) {
-		u8g2_DrawDLine(&u8g2, 10, i*16 + 2, max_x_point+10, i*16 + 2, 1);
-	}
-	// main axises:
-	u8g2_DrawVLine(&u8g2, 120, 0, max_y_point);
-	u8g2_DrawHLine(&u8g2, 10, 50, max_x_point);
-
-	// draw lines for point forward
-	// INVERSED COORDINATES, BECAUSE POINT MEASURED FROM UPPER END
-	for (int i = 10; i < max_x_point+10; ++i) {
-		int start_y = max_y_point/2-(float)((line_points_y[i]/translateus2Y-max_y_point/2)*multiplier[current_multiplier_index]) + bias[current_bias_index];
-		int end_y = max_y_point/2-(float)((line_points_y[i+1]/translateus2Y-max_y_point/2)*multiplier[current_multiplier_index]) + bias[current_bias_index];
-		if ((start_y <= max_y_point) && (end_y <= max_y_point) && (start_y >= 0) && (end_y >= 0)) {
-			u8g2_DrawLine(&u8g2, i, start_y, i+1, end_y);
-		} else if ((start_y <= 0) && (end_y >= 0)) {
-			u8g2_DrawLine(&u8g2, i, 0, i+1, end_y);
-		} else if ((start_y >= 0) && (end_y <= 0)) {
-			u8g2_DrawLine(&u8g2, i, start_y, i+1, 0);
-		} else if ((start_y > max_y_point) && (start_y <= max_y_point)){
-			u8g2_DrawLine(&u8g2, i, max_y_point, i+1, end_y);
-		} else if (start_y <= max_y_point && start_y > max_y_point){
-			u8g2_DrawLine(&u8g2, i, start_y, i+1, max_y_point);
-		}
-	}
-}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -651,15 +548,46 @@ uint8_t u8g2_gpio_and_delay_stm32(U8X8_UNUSED u8x8_t *u8x8, U8X8_UNUSED uint8_t 
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+// initialize beackup strategy
+void serialize_to_bkp_registers() {
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < DATA_ROWS; i++) {
+        for (uint32_t j = 0; j < DATA_COLS; j++) {
+            if (index < RTC_BKP_NUMBER) {
+                HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR0 + index, data_array[i][j]);
+                index++;
+            } else {
+                // Handle error: Not enough backup registers
+            }
+        }
+    }
+}
+
+void deserialize_from_bkp_registers() {
+    uint32_t index = 0;
+    for (uint32_t i = 0; i < DATA_ROWS; i++) {
+        for (uint32_t j = 0; j < DATA_COLS; j++) {
+            if (index < RTC_BKP_NUMBER) {
+                data_array[i][j] = HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR0 + index);
+                index++;
+            } else {
+                // Handle error: Not enough backup registers
+            }
+        }
+    }
+}
+
 
 // CAPTURE TIME BETWEEN TWO PULSES
 uint32_t number_of_overflowing = 0;  // TO DO
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
 	if ((htim->Instance == TIM10) && (valid_for_capturing == 1)) {
-		Difference = htim->Instance->CCR1;
-		add_element(round(COEFFICIENT*(double)(Difference)/TIMCLOCK) - TEST_DELAY);
-		valid_for_capturing = 0;
+		Difference = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
+		if ((Difference > TEST_DELAY) && (Difference < 30000)) {
+			add_element(round(COEFFICIENT*(double)(Difference)/TIMCLOCK) - TEST_DELAY);
+			valid_for_capturing = 0;
+		}
 	}
 }
 
@@ -711,6 +639,7 @@ int main(void)
   MX_TIM9_Init();
   MX_TIM13_Init();
   MX_TIM14_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
 
   HAL_TIM_OC_Start_IT(&htim14, TIM_CHANNEL_1);
@@ -806,8 +735,9 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 6;
@@ -832,6 +762,69 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief RTC Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_RTC_Init(void)
+{
+
+  /* USER CODE BEGIN RTC_Init 0 */
+
+  /* USER CODE END RTC_Init 0 */
+
+  RTC_TimeTypeDef sTime = {0};
+  RTC_DateTypeDef sDate = {0};
+
+  /* USER CODE BEGIN RTC_Init 1 */
+
+  /* USER CODE END RTC_Init 1 */
+
+  /** Initialize RTC Only
+  */
+  hrtc.Instance = RTC;
+  hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
+  hrtc.Init.AsynchPrediv = 127;
+  hrtc.Init.SynchPrediv = 255;
+  hrtc.Init.OutPut = RTC_OUTPUT_DISABLE;
+  hrtc.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
+  hrtc.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+  if (HAL_RTC_Init(&hrtc) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /* USER CODE BEGIN Check_RTC_BKUP */
+
+  /* USER CODE END Check_RTC_BKUP */
+
+  /** Initialize RTC and set the Time and Date
+  */
+  sTime.Hours = 0x0;
+  sTime.Minutes = 0x0;
+  sTime.Seconds = 0x0;
+  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
+  sDate.Month = RTC_MONTH_JANUARY;
+  sDate.Date = 0x1;
+  sDate.Year = 0x0;
+
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN RTC_Init 2 */
+
+  /* USER CODE END RTC_Init 2 */
+
 }
 
 /**
@@ -1189,13 +1182,7 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// MOVE IN CHILD ELEMENT, PROGRESS (FOR GRAPHS AND 2 MENU DETERMINATION BREAK U8G2 RULES)
 		case 3:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				u8g2_FirstPage(&u8g2);
-				do {
-					displayGraphPoints();
-				} while (u8g2_NextPage(&u8g2));
-				break;
-			} else if (Menu_GetCurrentMenu() == &Menu_2) {
+			if (Menu_GetCurrentMenu() == &Menu_2) {
 				u8g2_FirstPage(&u8g2);
 				do {
 					DrawGraphChangingLength();
@@ -1219,14 +1206,7 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MAKE SHARPER, ELSE IF FIRST MENU - MOVE CHANGEBLE POSITION TO LOWER
 		case 5:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if(current_multiplier_index < max_multiplier_index) {
-					current_multiplier_index++;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				if (menu1position < max_menu_position) {
 					menu1position += 1;
 				}
@@ -1235,14 +1215,7 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MAKE SMOOTHER, IF FIRST MENU - MOVE TO HIGHER POSITION
 		case 6:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if (current_multiplier_index > 0) { // check if this is not equal to zero
-					current_multiplier_index--;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				if (menu1position > 0) {
 					menu1position -= 1;
 				}
@@ -1251,14 +1224,7 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MOVE UP, THEN REDRAW
 		case 7:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if (current_bias_index < max_bias_index) {
-					current_bias_index++;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				int index_ = 9;
 				if (Menu_GetCurrentMenu() == &Menu_1_1) {
 					index_ = 0;
@@ -1290,14 +1256,7 @@ void rewriteDisplayFunction(void *argument)
 			break;
 		// IF GRAPH - MOVE DOWN, THEN REDRAW
 		case 8:
-			if (Menu_GetCurrentMenu() == &Menu_3) {
-				if (current_bias_index > 0) { // check if this is not equal to zero
-					current_bias_index--;
-					u8g2_ClearBuffer(&u8g2);
-					u8g2_SendBuffer(&u8g2);
-				}
-				ButtonState = 3;
-			} else if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
+			if (Menu_GetCurrentMenu()->Parent == &Menu_1) {
 				int index_ = 9;
 				if (Menu_GetCurrentMenu() == &Menu_1_1) {
 					index_ = 0;
@@ -1327,7 +1286,6 @@ void rewriteDisplayFunction(void *argument)
 				ButtonState = 0;
 			}
 			break;
-		// REDRAW
 		case 0:
 			Menu_Navigate(Menu_GetCurrentMenu(), Menu_GetCurrentLayerTopMenu());
 			break;
@@ -1370,7 +1328,7 @@ void buttonListenFunction(void *argument)
 //						TIM9->CCR2 = 500;
 						HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1);
 						while (HAL_GPIO_ReadPin(row_ports[j], row_pins[j]) == GPIO_PIN_RESET);
-						ButtonState = j * rows_count + i + 1;
+						ButtonState = j * columns_count + i + 1;
 						HAL_TIM_PWM_Stop(&htim9, TIM_CHANNEL_1);
 					}
 				}

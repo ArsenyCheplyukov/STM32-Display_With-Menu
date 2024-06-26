@@ -1,0 +1,73 @@
+
+# STM32CubeIDE and STM32CubeMX generated files and directories
+
+# Ignore the build directory
+/Debug/
+/Release/
+
+# Ignore configuration and temporary files
+*.launch
+*.pydevproject
+*.cproject
+*.project
+*.settings/
+.vscode/
+*.swp
+
+# Ignore generated source files
+*.bin
+*.elf
+*.hex
+*.map
+*.lst
+*.srec
+*.d
+*.o
+*.a
+*.axf
+*.lnk
+*.sct
+
+# Ignore log files
+*.log
+*.csv
+
+# Ignore temporary files
+*.bak
+*.tmp
+
+# Ignore Windows-specific files
+Thumbs.db
+Desktop.ini
+
+# Ignore macOS-specific files
+.DS_Store
+
+# Ignore build and output directories created by the IDE
+*.dep
+*.d
+*.o
+
+# Ignore STM32CubeMX generated files
+MXProjectMetadata/
+MXProjectSettings/
+*.ioc
+
+# Ignore firmware libraries and sources (usually downloaded separately)
+Middlewares/
+Drivers/
+Utilities/
+
+# Ignore the lib and obj directories
+lib/
+obj/
+
+# Ignore the IP address settings file (if used)
+ipconfig.txt
+
+# Ignore any local environment or build configuration files
+local.mk
+*.env
+
+# Ignore any user-specific settings
+*.user
